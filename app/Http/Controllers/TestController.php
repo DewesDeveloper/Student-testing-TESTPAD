@@ -22,52 +22,72 @@ class TestController extends Controller
 	}
 
 	public function store(Request $request)
-	{
-		$request->validate([
-			'title' => 'required|string|max:255',
-			'discipline_id' => 'required|exists:disciplines,id',
-			'description' => 'nullable|string|max:1000',
-		]);
+{
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'discipline_id' => 'required|exists:disciplines,id',
+    ]);
 
-		$test = Test::create([
-			'title' => $request->title,
-			'discipline_id' => $request->discipline_id,
-			'description' => $request->description,
-			'user_id' => Auth::id(),
-			'is_active' => true,
-		]);
+    //  Создаем тест
+    $test = Test::create([
+        'title'         => $request->title,
+        'discipline_id' => $request->discipline_id,
+        'description'   => $request->description,
+        'user_id'       => Auth::id(),
+        'is_active'     => true,
+    ]);
 
-		foreach ($request->questions as $index => $qData) {
-			$question = $test->questions()->create([
-				'question_text' => $qData['text'],
-				'type' => $qData['type'],
-				'points' => $qData['points'] ?? 1,
-				'explanation' => $qData['explanation'] ?? null,
-				'is_required' => isset($qData['is_required']),
-				'shuffle_options' => isset($qData['shuffle_options']),
-			]);
+    // ОДИН цикл для всех вопросов
+    if ($request->has('questions')) {
+        foreach ($request->questions as $index => $qData) {
+            
+            // Обработка загрузки изображения
+            $imagePath = null;
+            if ($request->hasFile("questions.$index.image")) {
+                $imagePath = $request->file("questions.$index.image")->store('question_images', 'public');
+            }
 
-			if (isset($qData['options'])) {
-				foreach ($qData['options'] as $oIndex => $oData) {
+            // Создаем вопрос (включая путь к картинке)
+            $question = $test->questions()->create([
+                'question_text' => $qData['text'],
+                'type'          => $qData['type'],
+                'points'        => $qData['points'] ?? 1,
+                'explanation'   => $qData['explanation'] ?? null,
+                'image'         => $imagePath, 
+                'is_required'   => isset($qData['is_required']),
+                'shuffle_options_individual' => isset($qData['shuffle_options']),
+            ]);
 
-					$isCorrect = false;
-					if ($qData['type'] === 'single_choice') {
-						$isCorrect = ($request->input("questions.$index.correct") == $oIndex);
-					} else {
-						$isCorrect = isset($oData['is_correct']);
-					}
+            //  Сохраняем варианты ответов
+            if (isset($qData['options'])) {
+                foreach ($qData['options'] as $oIndex => $oData) {
+                    $isCorrect = false;
 
-					$question->options()->create([
-						'option_text' => $oData['text'] ?? '',
-						'is_correct' => $isCorrect,
-						'match_text' => $oData['match_text'] ?? null,
-					]);
-				}
-			}
-		}
+                    // Одиночный выбор (радиокнопки)
+                    if (in_array($qData['type'], ['single_choice', 'single', 'image_choice'])) {
+                        $isCorrect = ($request->input("questions.$index.correct") == $oIndex);
+                    } 
+                    // Пропуски
+                    elseif ($qData['type'] === 'fill_in_gaps') {
+                        $isCorrect = true;
+                    }
+                    // Множественный выбор (чекбоксы)
+                    else {
+                        $isCorrect = isset($oData['is_correct']);
+                    }
 
-		return redirect()->route('dashboard');
-	}
+                    $question->options()->create([
+                        'option_text' => $oData['text'] ?? '',
+                        'is_correct'  => $isCorrect,
+                        'match_text'  => $oData['match_text'] ?? null,
+                    ]);
+                }
+            }
+        }
+    }
+
+    return redirect()->route('dashboard')->with('success', 'Тест успешно создан!');
+}
 
 	public function show(Test $test)
 	{
@@ -407,54 +427,52 @@ class TestController extends Controller
 	}
 
 	public function update(Request $request, Test $test)
-	{
-		if ($test->user_id !== Auth::id()) {
-			abort(403);
-		}
+{
+    if ($test->user_id !== Auth::id()) abort(403);
 
+    // Обновляем шапку
+    $test->update($request->only(['title', 'discipline_id', 'description']));
 
-		$test->update([
-			'title' => $request->title,
-			'discipline_id' => $request->discipline_id,
-			'description' => $request->description,
-		]);
+    // Удаляем старые вопросы (Cascade удалит опции)
+    $test->questions()->delete();
 
+    if ($request->has('questions')) {
+        foreach ($request->questions as $index => $qData) {
+            
+            // Если загружен новый файл - сохраняем, иначе берем старый путь (если он передан в скрытом поле)
+            $imagePath = $qData['image'] ?? null; 
+            if ($request->hasFile("questions.$index.image")) {
+                $imagePath = $request->file("questions.$index.image")->store('question_images', 'public');
+            }
 
-		$test->questions()->delete();
+            $question = $test->questions()->create([
+                'question_text' => $qData['text'],
+                'type'          => $qData['type'],
+                'points'        => $qData['points'] ?? 1,
+                'image'         => $imagePath,
+                'explanation'   => $qData['explanation'] ?? null,
+                'is_required'   => isset($qData['is_required']),
+            ]);
 
+            // Цикл по опциям (такой же как в store выше)
+            if (isset($qData['options'])) {
+                foreach ($qData['options'] as $oIndex => $oData) {
+                    $isCorrect = (in_array($qData['type'], ['single_choice', 'image_choice']))
+                        ? ($request->input("questions.$index.correct") == $oIndex)
+                        : (isset($oData['is_correct']) || $qData['type'] === 'fill_in_gaps');
 
-		if ($request->has('questions')) {
-			foreach ($request->questions as $index => $qData) {
-				$question = $test->questions()->create([
-					'question_text' => $qData['text'],
-					'type' => $qData['type'],
-					'points' => $qData['points'] ?? 1,
-					'explanation' => $qData['explanation'] ?? null,
-					'is_required' => isset($qData['is_required']),
-					'shuffle_options' => isset($qData['shuffle_options']),
-				]);
+                    $question->options()->create([
+                        'option_text' => $oData['text'] ?? '',
+                        'is_correct'  => $isCorrect,
+                        'match_text'  => $oData['match_text'] ?? null,
+                    ]);
+                }
+            }
+        }
+    }
 
-				if (isset($qData['options'])) {
-					foreach ($qData['options'] as $oIndex => $oData) {
-						$isCorrect = false;
-						if ($qData['type'] === 'single_choice') {
-							$isCorrect = ($request->input("questions.$index.correct") == $oIndex);
-						} else {
-							$isCorrect = isset($oData['is_correct']);
-						}
-
-						$question->options()->create([
-							'option_text' => $oData['text'] ?? '',
-							'is_correct' => $isCorrect,
-							'match_text' => $oData['match_text'] ?? null,
-						]);
-					}
-				}
-			}
-		}
-
-		return redirect()->route('tests.show', $test->id)->with('success', 'Тест успешно обновлен');
-	}
+    return redirect()->route('tests.show', $test->id);
+}
 
 	public function exportPdf(TestResult $result)
 	{

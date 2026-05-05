@@ -92,6 +92,28 @@
 
 									<div
 										class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
+										Изображение
+										<div
+											class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]">
+										</div>
+									</div>
+									<div
+										class="mb-6 flex items-center gap-4 p-4 border-2 border-dashed border-gray-100 rounded-lg">
+										<input type="file" :name="`questions[${qIndex}][image]`"
+											class="text-xs text-gray-400">
+
+										<!-- Предпросмотр, если картинка уже загружена (для страницы редактирования) -->
+										<template x-if="question.image">
+											<div class="relative">
+												<img :src="'/storage/' + question.image"
+													class="h-20 rounded border shadow-sm">
+												<p class="text-[9px] text-gray-400 text-center mt-1">Текущее фото</p>
+											</div>
+										</template>
+									</div>
+
+									<div
+										class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
 										Варианты ответов
 										<div
 											class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]">
@@ -120,7 +142,7 @@
 															варианта ответа</th>
 													</template>
 													<template
-														x-if="['single_choice', 'multi_choice'].includes(question.type)">
+														x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
 														<th
 															class="w-20 pb-2 text-center uppercase tracking-tighter text-[9px]">
 															Верно?</th>
@@ -159,11 +181,11 @@
 
 														<!-- ГАЛОЧКА "ВЕРНО" (Для выбора) -->
 														<template
-															x-if="['single_choice', 'multi_choice'].includes(question.type)">
+															x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
 															<td class="py-2 text-center">
 																<input
-																	:type="question.type.includes('single') ? 'radio' : 'checkbox'"
-																	:name="question.type.includes('single') ? `questions[${qIndex}][correct]` : `questions[${qIndex}][options][${oIndex}][is_correct]`"
+																	:type="['single_choice', 'image_choice'].includes(question.type) ? 'radio' : 'checkbox'"
+																	:name="['single_choice', 'image_choice'].includes(question.type) ? `questions[${qIndex}][correct]` : `questions[${qIndex}][options][${oIndex}][is_correct]`"
 																	:value="oIndex" :checked="option.is_correct"
 																	class="w-4 h-4 text-blue-600 cursor-pointer">
 															</td>
@@ -280,6 +302,7 @@
 					{ id: 'number', name: 'Ввод числа', icon: '🔢' },
 					{ id: 'text', name: 'Ввод текста', icon: '🔤' },
 					{ id: 'free_form', name: 'Ответ в свободной форме', icon: '📝' },
+					{ id: 'fill_in_gaps', name: 'Заполнение пропусков', icon: '🧩' }, // Иконка пазла
 					{ id: 'sequence', name: 'Последовательность', icon: '🪜' },
 					{ id: 'matching', name: 'Соответствие', icon: '🔗' },
 					{ id: 'file', name: 'Загрузка файла', icon: '📁' },
