@@ -169,14 +169,14 @@ class TestSessionController extends Controller
 	public function showResult(TestResult $result)
 	{
 
-		if ($result->user_id !== Auth::id() && Auth::user()->role !== 'teacher') {
+	    $canView = ($result->user_id === Auth::id()) || (Auth::user()->role === 'teacher');
+		 if (Auth::user()->role === 'student' && !$result->test->show_result_to_user) {
 			abort(403);
 		}
 
 
 		$result->load(['test.questions.options']);
-
-		return view('tests.result_page', compact('result'));
+    	return view('tests.result_page', compact('result'));
 	}
 
 	public function showDetailedResult(TestResult $result)
