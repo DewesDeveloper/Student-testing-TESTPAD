@@ -118,7 +118,7 @@
                                 <div class="mt-4 pt-4 border-t border-gray-200">
                                     <p class="text-[10px] text-green-600 font-black uppercase mb-1">Правильный ответ:</p>
                                     <p class="text-sm text-green-700 font-bold">
-                                        {{ $question->options->where('is_correct', true)->first()->option_text ?? '—' }}
+                                        {{ $question->options->where('is_correct', true)->pluck('option_text')->implode(', ') ?: '—' }}
                                     </p>
                                 </div>
                             @endif
@@ -141,7 +141,67 @@
                                 </div>
                             @endforeach
                         </div>
-                    @endif
+
+                    <!-- Последовательность -->
+                    @elseif($question->type === 'sequence')
+                        <div class="space-y-2">
+                            @foreach($question->options as $idx => $option)
+                                @php
+                                    $correctRank = $idx + 1;
+                                    $studentRank = $studentAns[$option->id] ?? '-';
+                                    $isRankCorrect = $studentRank == $correctRank;
+                                @endphp
+                                <div class="flex justify-between items-center p-3 border rounded-xl {{ $isRankCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200' }}">
+                                    <span class="text-sm font-bold text-gray-700">{{ $option->option_text }}</span>
+                                    <div class="text-right">
+                                        <span class="text-sm font-bold {{ $isRankCorrect ? 'text-green-700' : 'text-red-700' }}">
+                                            Ваш порядок: №{{ $studentRank }}
+                                        </span>
+                                        @if(!$isRankCorrect)
+                                            <div class="text-xs text-gray-400 mt-1">Правильно: №{{ $correctRank }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                    <!-- Заполнение пропусков -->
+                    @elseif($question->type === 'fill_in_gaps')
+                        <div class="space-y-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            @foreach($question->options as $oIdx => $option)
+                                @php
+                                    $studentWord = $studentAns[$oIdx] ?? '';
+                                    $correctWord = $option->option_text;
+                                    $isGapCorrect = trim(mb_strtolower($studentWord)) === trim(mb_strtolower($correctWord));
+                                @endphp
+                                <div class="flex items-center justify-between p-2 border-b last:border-0 border-gray-200">
+                                    <span class="text-xs text-gray-500 font-bold uppercase tracking-widest">Пропуск {{ $oIdx + 1 }}:</span>
+                                    <div class="text-right">
+                                        <span class="text-sm font-bold {{ $isGapCorrect ? 'text-green-600' : 'text-red-600' }}">
+                                            {{ $studentWord ?: '(пусто)' }}
+                                        </span>
+                                        @if(!$isGapCorrect)
+                                            <span class="text-xs text-green-600 ml-2">(правильно: {{ $correctWord }})</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                    <!-- Загрузка файла -->
+                    @elseif($question->type === 'file')
+                        <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 text-center">
+                            @if(is_array($studentAns) && isset($studentAns['path']))
+                                <p class="text-sm text-gray-600 mb-2">Загруженный файл:</p>
+                                <a href="{{ asset('storage/' . $studentAns['path']) }}" target="_blank" class="text-blue-600 font-bold hover:underline text-lg">
+                                    📎 {{ $studentAns['name'] }}
+                                </a>
+                            @else
+                                <p class="text-sm text-red-400 font-bold">Файл не был загружен</p>
+                            @endif
+                            <p class="text-[10px] text-gray-400 uppercase mt-4 font-bold tracking-widest">Этот вопрос оценивается преподавателем вручную</p>
+                        </div>
+                    @endif <!-- ЗАКРЫВАЕМ БЛОК ТИПОВ ВОПРОСОВ -->
 
                     <!-- Пояснение (explanation) -->
                     @if($question->explanation && !$isFullCorrect)

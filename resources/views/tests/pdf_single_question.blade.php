@@ -12,6 +12,8 @@
         .correct { color: green; font-weight: bold; }
         .incorrect { color: red; font-weight: bold; }
         .footer { margin-top: 30px; font-size: 10px; color: #aaa; text-align: center; }
+        .answer-list { margin: 5px 0 15px 0; padding-left: 20px; }
+        .answer-list li { margin-bottom: 3px; }
     </style>
 </head>
 <body>
@@ -29,17 +31,42 @@
         <div class="question-text">Вопрос: {{ $question->question_text }}</div>
 
         <div class="answer-box">
-            <p><strong>Ответ студента:</strong></p>
-            @php $ans = $answerData['answer'] ?? 'нет ответа'; @endphp
+            <p style="margin-bottom: 5px;"><strong>Ответ студента:</strong></p>
+            
+            @php $ans = $answerData['answer'] ?? null; @endphp
 
-            @if(is_array($ans))
-                {{ json_encode($ans, JSON_UNESCAPED_UNICODE) }}
+            @if($question->type === 'file')
+                @if(is_array($ans) && isset($ans['name']))
+                    <p style="font-size: 14px; font-weight: bold; color: #1a5a96;">📎 {{ $ans['name'] }}</p>
+                @else
+                    <p style="color: red;">Файл не загружен</p>
+                @endif
+
+            @elseif(in_array($question->type, ['multi_choice', 'multi']))
+                @if(is_array($ans))
+                    <ul class="answer-list">
+                    @foreach($question->options as $opt)
+                        @if(in_array($opt->id, $ans))
+                            <li>{{ $opt->option_text }}</li>
+                        @endif
+                    @endforeach
+                    </ul>
+                @else
+                    <p>нет ответа</p>
+                @endif
+
+            @elseif(is_array($ans))
+                <ul class="answer-list">
+                    @foreach($ans as $val)
+                        <li>{{ $val }}</li>
+                    @endforeach
+                </ul>
             @else
-                <p style="font-size: 14px;">{{ $ans }}</p>
+                <p style="font-size: 14px;">{{ $ans ?: 'нет ответа' }}</p>
             @endif
 
-            <hr>
-            <p>Начислено баллов: <strong>{{ $answerData['score'] ?? 0 }}</strong> из {{ $question->points }}</p>
+            <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+            <p>Начислено баллов: <strong style="font-size: 14px;">{{ $answerData['score'] ?? 0 }}</strong> из {{ $question->points }}</p>
         </div>
     </div>
 

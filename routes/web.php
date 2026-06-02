@@ -50,7 +50,6 @@ Route::middleware('auth:sanctum')->group(function () {
     })->middleware(['auth:sanctum'])->name('dashboard');
 
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
     Route::get('/tests/create', [TestController::class, 'create'])->name('tests.create');
     Route::post('/tests', [TestController::class, 'store'])->name('tests.store');
     Route::get('/tests/{test}', [TestController::class, 'show'])->name('tests.show');
@@ -83,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tests/{test}/statistics', [TestController::class, 'statistics'])->name('tests.statistics');
 
     Route::post('/disciplines', [TestController::class, 'storeDiscipline'])->name('disciplines.store');
+    Route::delete('/disciplines/{discipline}', [TestController::class, 'destroyDiscipline'])->name('disciplines.destroy');
 
     // Экспорт результатов в Excel
     Route::get('/tests/{test}/export-excel', [TestController::class, 'exportExcel'])->name('tests.export-excel');

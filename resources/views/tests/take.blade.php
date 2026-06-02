@@ -8,22 +8,10 @@
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 	<style>
-		[x-cloak] {
-			display: none !important;
-		}
-
-		.no-select {
-			user-select: none;
-		}
-
-		.nav-grid::-webkit-scrollbar {
-			height: 4px;
-		}
-
-		.nav-grid::-webkit-scrollbar-thumb {
-			background: #cbd5e1;
-			border-radius: 10px;
-		}
+		[x-cloak] { display: none !important; }
+		.no-select { user-select: none; }
+		.nav-grid::-webkit-scrollbar { height: 4px; }
+		.nav-grid::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 	</style>
 </head>
 
@@ -73,9 +61,21 @@ oncopy="return false" oncontextmenu="return false" @endif>
 				<!-- ФИКСИРОВАННАЯ ШАПКА -->
 				<header class="bg-white shadow-sm sticky top-0 z-50 border-b">
 					<div class="p-4 flex justify-between items-center bg-gray-50/50">
-						<h2 class="font-bold text-gray-700 truncate mr-4 text-sm uppercase tracking-wider">
-							{{ $test->title }}
-						</h2>
+						<div class="flex items-center gap-4">
+							<h2 class="font-bold text-gray-700 truncate max-w-[200px] md:max-w-md text-sm uppercase tracking-wider">
+								{{ $test->title }}
+							</h2>
+							
+							<!-- Выпадающий список вопросов (Настройка) -->
+							@if($test->show_dropdown)
+							<select x-model.number="currentQuestion" class="bg-white border border-gray-300 text-gray-600 text-xs rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500">
+								<template x-for="(q, index) in totalQuestions">
+									<option :value="index" x-text="'Вопрос ' + (index + 1)"></option>
+								</template>
+							</select>
+							@endif
+						</div>
+
 						@if($test->show_time || $test->limit_time)
 							<div
 								class="bg-white px-4 py-1 rounded-full font-mono font-bold border border-orange-200 text-orange-600 shadow-sm">
@@ -84,9 +84,12 @@ oncopy="return false" oncontextmenu="return false" @endif>
 						@endif
 					</div>
 
+					<!-- Прогресс бар (Настройка) -->
+					@if($test->show_progress_bar)
 					<div class="w-full bg-gray-100 h-1">
 						<div class="bg-blue-500 h-1 transition-all duration-500" :style="`width: ${progress}%`"></div>
 					</div>
+					@endif
 
 					<div class="p-3 flex gap-2 overflow-x-auto nav-grid bg-white">
 						<template x-for="(q, index) in totalQuestions" :key="index">
@@ -110,10 +113,14 @@ oncopy="return false" oncontextmenu="return false" @endif>
 							<div x-show="currentQuestion === {{ $index }}" x-transition.opacity.duration.300ms
 								class="space-y-6">
 								<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-10">
+									
+									<!-- Номера вопросов (Настройка) -->
+									@if($test->show_numbers)
 									<div class="text-blue-500 font-black text-xs uppercase tracking-widest mb-4">
 										Вопрос <span x-text="currentQuestion + 1"></span> из <span
 											x-text="totalQuestions"></span>
 									</div>
+									@endif
 
 									@if($question->image)
 										<div
@@ -134,8 +141,8 @@ oncopy="return false" oncontextmenu="return false" @endif>
 										@if(in_array($question->type, ['single_choice', 'multi_choice', 'single', 'multi', 'image_choice']))
 											@foreach($question->options as $option)
 												<label
-													class="flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-blue-50 transition-all group border-gray-100"
-													:class="isOptionSelected({{ $question->id }}, {{ $option->id }}) ? 'border-blue-500 bg-blue-50' : ''">
+													class="flex items-center p-4 border-2 rounded-xl cursor-pointer transition-all group"
+													:class="getOptionClass({{ $question->id }}, {{ $option->id }}, {{ $option->is_correct ? 'true' : 'false' }})">
 													<input
 														type="{{ in_array($question->type, ['single_choice', 'single', 'image_choice']) ? 'radio' : 'checkbox' }}"
 														name="q[{{ $question->id }}]{{ in_array($question->type, ['multi_choice', 'multi']) ? '[]' : '' }}"
@@ -147,21 +154,21 @@ oncopy="return false" oncontextmenu="return false" @endif>
 												</label>
 											@endforeach
 
-											<!-- 2. ВВОД ТЕКСТА / ЧИСЛА -->
+										<!-- 2. ВВОД ТЕКСТА / ЧИСЛА -->
 										@elseif(in_array($question->type, ['text', 'number']))
 											<input type="{{ $question->type }}" name="q[{{ $question->id }}]"
 												@input="markAsAnswered({{ $index }}, 'input', {{ $question->id }})"
 												class="w-full p-5 border-2 rounded-xl focus:border-blue-500 outline-none text-lg bg-gray-50 focus:bg-white transition-all shadow-inner"
 												placeholder="Введите ваш ответ...">
 
-											<!-- 3. СВОБОДНАЯ ФОРМА -->
+										<!-- 3. СВОБОДНАЯ ФОРМА -->
 										@elseif($question->type === 'free_form')
 											<textarea name="q[{{ $question->id }}]" rows="6"
 												@input="markAsAnswered({{ $index }}, 'input', {{ $question->id }})"
 												class="w-full p-5 border-2 rounded-xl focus:border-blue-500 outline-none text-lg bg-gray-50 shadow-inner"
 												placeholder="Напишите развернутый ответ..."></textarea>
 
-											<!-- 4. ЗАГРУЗКА ФАЙЛА -->
+										<!-- 4. ЗАГРУЗКА ФАЙЛА -->
 										@elseif($question->type === 'file')
 											<div
 												class="border-4 border-dashed border-gray-100 rounded-2xl p-12 text-center hover:border-blue-200 transition-colors bg-gray-50">
@@ -170,7 +177,7 @@ oncopy="return false" oncontextmenu="return false" @endif>
 													class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
 											</div>
 
-											<!-- 5. ПОСЛЕДОВАТЕЛЬНОСТЬ -->
+										<!-- 5. ПОСЛЕДОВАТЕЛЬНОСТЬ -->
 										@elseif($question->type === 'sequence')
 											<div class="space-y-3">
 												@foreach($question->options->shuffle() as $option)
@@ -185,7 +192,7 @@ oncopy="return false" oncontextmenu="return false" @endif>
 												@endforeach
 											</div>
 
-											<!-- 6. СООТВЕТСТВИЕ -->
+										<!-- 6. СООТВЕТСТВИЕ -->
 										@elseif($question->type === 'matching')
 											@php $matches = $question->options->pluck('match_text')->filter()->unique()->shuffle(); @endphp
 											<div class="space-y-3">
@@ -205,7 +212,7 @@ oncopy="return false" oncontextmenu="return false" @endif>
 												@endforeach
 											</div>
 
-											<!-- 7. ЗАПОЛНЕНИЕ ПРОПУСКОВ -->
+										<!-- 7. ЗАПОЛНЕНИЕ ПРОПУСКОВ -->
 										@elseif($question->type === 'fill_in_gaps')
 											<div
 												class="text-xl leading-[3rem] text-gray-700 bg-gray-50 p-8 rounded-2xl border-2 border-dashed border-gray-200 shadow-inner">
@@ -229,11 +236,12 @@ oncopy="return false" oncontextmenu="return false" @endif>
 							</div>
 						@endforeach
 
+						<!-- Комментарии к тесту (Настройка) -->
 						@if($test->allow_comments)
 							<div x-show="currentQuestion === totalQuestions - 1" x-transition class="mt-10">
 								<div class="bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-6">
 									<label class="block text-indigo-900 font-bold mb-3 italic">💬 Ваш комментарий к
-										тесту:</label>
+										результатам теста (необязательно):</label>
 									<textarea name="student_comment" rows="3"
 										class="w-full p-4 border-none rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-indigo-400"></textarea>
 								</div>
@@ -277,6 +285,9 @@ oncopy="return false" oncontextmenu="return false" @endif>
 				progress: 0,
 				answeredFlags: {},
 				selectionMap: {},
+				
+				// Настройка моментальной проверки
+				instantlyCheck: {{ $test->show_correct_instantly ? 'true' : 'false' }},
 
 				init() { },
 
@@ -307,6 +318,22 @@ oncopy="return false" oncontextmenu="return false" @endif>
 					this.updateProgress();
 				},
 
+				// Динамические стили для отображения правильных ответов
+				getOptionClass(qId, optId, isCorrect) {
+					const selected = this.isOptionSelected(qId, optId);
+
+					// Если включена моментальная проверка и пользователь уже ответил на этот вопрос
+					if (this.instantlyCheck && this.answeredFlags[this.currentQuestion]) {
+						if (selected && isCorrect) return 'border-green-500 bg-green-50 text-green-700'; // Выбрал верно
+						if (selected && !isCorrect) return 'border-red-500 bg-red-50 text-red-700'; // Выбрал неверно
+						if (!selected && isCorrect) return 'border-green-300 border-dashed bg-white text-green-600'; // Не выбрал, но ответ был верный
+						return 'border-gray-100 opacity-50'; // Остальные варианты
+					}
+
+					// Стандартное поведение (без проверки)
+					return selected ? 'border-blue-500 bg-blue-50' : 'hover:bg-blue-50 border-gray-100';
+				},
+
 				isAnswered(index) { return this.answeredFlags[index] === true; },
 				isOptionSelected(qId, optId) { return this.selectionMap[qId] && this.selectionMap[qId].includes(optId); },
 
@@ -320,7 +347,10 @@ oncopy="return false" oncontextmenu="return false" @endif>
 					if (this.currentQuestion < this.totalQuestions - 1) { this.currentQuestion++; window.scrollTo(0, 0); }
 				},
 
-				prevQuestion() { if (this.currentQuestion > 0) { this.currentQuestion--; window.scrollTo(0, 0); } },
+				prevQuestion() { 
+					if ({{ $test->prevent_back ? 'true' : 'false' }}) { alert('Возврат к предыдущему вопросу запрещен настройками теста.'); return; }
+					if (this.currentQuestion > 0) { this.currentQuestion--; window.scrollTo(0, 0); } 
+				},
 
 				finishTest(force = false) {
 					if (!force && {{ $test->require_all_answers ? 'true' : 'false' }}) {

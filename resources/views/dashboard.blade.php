@@ -21,10 +21,25 @@
 					Все дисциплины
 				</a>
 				@foreach($disciplines as $d)
-					<a href="?discipline_id={{ $d->id }}"
-						class="px-5 py-2 rounded-full border text-sm transition {{ request('discipline_id') == $d->id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50' }}">
-						{{ $d->name }}
-					</a>
+					<div class="flex items-stretch rounded-full border transition-all overflow-hidden {{ request('discipline_id') == $d->id ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-gray-500 hover:bg-gray-50' }}">
+						
+						<!-- Ссылка для фильтрации -->
+						<a href="?discipline_id={{ $d->id }}" class="px-4 py-2 text-sm flex items-center">
+							{{ $d->name }}
+						</a>
+						
+						<!-- Кнопка удаления -->
+						<form action="{{ route('disciplines.destroy', $d->id) }}" method="POST" class="flex" 
+							onsubmit="return confirm('Удалить эту дисциплину? (Связанные тесты останутся, но будут без дисциплины)')">
+							@csrf 
+							@method('DELETE')
+							<button type="submit" title="Удалить дисциплину" 
+									class="px-3 flex items-center justify-center border-l transition-colors hover:bg-red-500 hover:text-white {{ request('discipline_id') == $d->id ? 'border-blue-500 text-blue-200' : 'border-gray-100 text-gray-400' }}">
+								✕
+							</button>
+						</form>
+
+					</div>
 				@endforeach
 			</div>
 

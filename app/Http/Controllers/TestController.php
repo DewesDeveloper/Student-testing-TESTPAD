@@ -63,14 +63,14 @@ class TestController extends Controller
                 foreach ($qData['options'] as $oIndex => $oData) {
                     $isCorrect = false;
 
-                    // Одиночный выбор (радиокнопки)
-                    if (in_array($qData['type'], ['single_choice', 'single', 'image_choice'])) {
-                        $isCorrect = ($request->input("questions.$index.correct") == $oIndex);
-                    } 
-                    // Пропуски
-                    elseif ($qData['type'] === 'fill_in_gaps') {
-                        $isCorrect = true;
-                    }
+                   // Одиночный выбор (радиокнопки)
+					if (in_array($qData['type'], ['single_choice', 'single', 'image_choice'])) {
+						$isCorrect = ($request->input("questions.$index.correct") == $oIndex);
+					} 
+					// Пропуски, Текст, Число (все добавленные варианты считаются правильными ключами)
+					elseif (in_array($qData['type'], ['fill_in_gaps', 'text', 'number'])) {
+						$isCorrect = true;
+					}
                     // Множественный выбор (чекбоксы)
                     else {
                         $isCorrect = isset($oData['is_correct']);
@@ -236,76 +236,85 @@ class TestController extends Controller
 	}
 
 	public function statistics(Request $request, Test $test)
-	{
-		if ($test->user_id !== Auth::id()) {
-			abort(403);
-		}
+    {
+        if ($test->user_id !== Auth::id()) {
+            abort(403);
+        }
 
+        $test->load(['questions.options', 'results.student']);
 
-		$test->load(['questions.options', 'results.student']);
+        $resultsQuery = $test->results()->with('student');
+        if ($request->filled('search')) {
+            $resultsQuery->where('id', $request->search);
+        }
+        $results = $resultsQuery->latest()->get();
 
-		$resultsQuery = $test->results()->with('student');
-		if ($request->filled('search')) {
-			$resultsQuery->where('id', $request->search);
-		}
-		$results = $resultsQuery->latest()->get();
+        // 1. ПОДСЧЕТ ПРАВИЛЬНЫХ ОТВЕТОВ ДЛЯ ТАБЛИЦЫ
+        foreach ($results as $res) {
+            $correctCount = 0;
+            // Получаем все ответы студента как простой список (по порядку 0, 1, 2...)
+            $answersList = is_array($res->answers) ? array_values($res->answers) : [];
 
+            foreach ($test->questions as $index => $question) {
+                // Если ID изменился при редактировании, берем ответ по его порядковому индексу
+                $data = $res->answers[$question->id] ?? ($answersList[$index] ?? null);
 
-		foreach ($results as $res) {
-			$correctCount = 0;
-			foreach ($test->questions as $question) {
-				$data = $res->answers[$question->id] ?? null;
+                $score = is_array($data) && array_key_exists('score', $data)
+                    ? (float) $data['score']
+                    : $this->calculateScoreForQuestion($question, is_array($data) ? ($data['answer'] ?? $data) : $data);
 
-				$score = is_array($data) && isset($data['score'])
-					? (float) $data['score']
-					: $this->calculateScoreForQuestion($question, $data);
+                // Защита от багов с плавающей запятой (используем round)
+                if (round($score, 2) >= round((float)$question->points, 2) && $question->points > 0) {
+                    $correctCount++;
+                }
+            }
+            $res->correct_answers_count = $correctCount;
+        }
 
-				if ($score >= $question->points && $question->points > 0) {
-					$correctCount++;
-				}
-			}
-			$res->correct_answers_count = $correctCount;
-		}
+        // 2. АНАЛИЗ ПО КАЖДОМУ ВОПРОСУ (ДЛЯ ВКЛАДКИ)
+        $questionsAnalysis = [];
+        $allResults = $test->results;
+        $totalStudents = $allResults->count();
 
+        foreach ($test->questions as $index => $question) {
+            $correct = 0;
+            $partial = 0;
+            $incorrect = 0;
 
-		$questionsAnalysis = [];
-		$allResults = $test->results;
-		$totalStudents = $allResults->count();
+            foreach ($allResults as $res) {
+                $answersList = is_array($res->answers) ? array_values($res->answers) : [];
+                $data = $res->answers[$question->id] ?? ($answersList[$index] ?? null);
 
-		foreach ($test->questions as $question) {
-			$correct = 0;
-			$partial = 0;
-			$incorrect = 0;
+                $score = is_array($data) && array_key_exists('score', $data)
+                    ? (float) $data['score']
+                    : $this->calculateScoreForQuestion($question, is_array($data) ? ($data['answer'] ?? $data) : $data);
 
-			foreach ($allResults as $res) {
-				$data = $res->answers[$question->id] ?? null;
-				$score = is_array($data) && isset($data['score']) ? (float) $data['score'] : 0;
+                $score = round($score, 2);
+                $points = round((float)$question->points, 2);
 
-				if ($score >= $question->points && $question->points > 0) {
-					$correct++;
-				} elseif ($score > 0) {
-					$partial++;
-				} else {
-					$incorrect++;
-				}
-			}
+                if ($score >= $points && $points > 0) {
+                    $correct++;
+                } elseif ($score > 0) {
+                    $partial++;
+                } else {
+                    $incorrect++;
+                }
+            }
 
-			$questionsAnalysis[] = [
-				'text' => $question->question_text,
-				'max_points' => $question->points,
+            $questionsAnalysis[] = [
+                'text' => $question->question_text,
+                'max_points' => $question->points,
+                'incorrect_pct' => $totalStudents > 0 ? round(($incorrect / $totalStudents) * 100) : 0,
+                'partial_pct' => $totalStudents > 0 ? round(($partial / $totalStudents) * 100) : 0,
+                'correct_pct' => $totalStudents > 0 ? round(($correct / $totalStudents) * 100) : 0,
+                'incorrect_cnt' => $incorrect,
+                'partial_cnt' => $partial,
+                'correct_cnt' => $correct,
+            ];
+        }
 
-				'incorrect_pct' => $totalStudents > 0 ? round(($incorrect / $totalStudents) * 100) : 0,
-				'partial_pct' => $totalStudents > 0 ? round(($partial / $totalStudents) * 100) : 0,
-				'correct_pct' => $totalStudents > 0 ? round(($correct / $totalStudents) * 100) : 0,
-
-				'incorrect_cnt' => $incorrect,
-				'partial_cnt' => $partial,
-				'correct_cnt' => $correct,
-			];
-		}
-
-		return view('tests.statistics', compact('test', 'results', 'questionsAnalysis'));
-	}
+        return view('tests.statistics', compact('test', 'results', 'questionsAnalysis'));
+    }
 
 
 	private function calculateScoreForQuestion($question, $ans)
@@ -338,6 +347,17 @@ class TestController extends Controller
 					$qScore -= $pointsPerOption;
 				}
 			}
+			if (in_array($question->type, ['text', 'number'])) {
+			$studentAnsStr = trim(mb_strtolower((string) $ans));
+			$correctOptions = $question->options->where('is_correct', true);
+			
+			foreach ($correctOptions as $correctOption) {
+				if ($studentAnsStr === trim(mb_strtolower((string) $correctOption->option_text))) {
+					return $question->points;
+				}
+			}
+			return 0;
+		}
 
 			return max(0, $qScore);
 		}
@@ -401,7 +421,16 @@ class TestController extends Controller
 
 		return back()->with('success', 'Дисциплина успешно добавлена');
 	}
+	public function destroyDiscipline(\App\Models\Discipline $discipline)
+    {
+        if (Auth::user()->role !== 'teacher') {
+            abort(403);
+        }
 
+        $discipline->delete();
+
+        return back()->with('success', 'Дисциплина успешно удалена');
+    }
 	public function exportExcel(Test $test)
 	{
 		if ($test->user_id !== Auth::id()) {
@@ -457,9 +486,13 @@ class TestController extends Controller
             // Цикл по опциям (такой же как в store выше)
             if (isset($qData['options'])) {
                 foreach ($qData['options'] as $oIndex => $oData) {
-                    $isCorrect = (in_array($qData['type'], ['single_choice', 'image_choice']))
-                        ? ($request->input("questions.$index.correct") == $oIndex)
-                        : (isset($oData['is_correct']) || $qData['type'] === 'fill_in_gaps');
+                   if (in_array($qData['type'], ['single_choice', 'image_choice'])) {
+						$isCorrect = ($request->input("questions.$index.correct") == $oIndex);
+					} elseif (in_array($qData['type'], ['fill_in_gaps', 'text', 'number'])) {
+						$isCorrect = true;
+					} else {
+						$isCorrect = isset($oData['is_correct']);
+					}
 
                     $question->options()->create([
                         'option_text' => $oData['text'] ?? '',

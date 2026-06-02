@@ -114,12 +114,16 @@ class TestSessionController extends Controller
 
 			// 6. Текст / Число
 			elseif (in_array($question->type, ['text', 'number'])) {
-				$correctOption = $question->options->where('is_correct', true)->first();
-				if ($correctOption && trim(mb_strtolower((string) $ans)) === trim(mb_strtolower($correctOption->option_text))) {
-					$qScore = $question->points;
+				$studentAnsStr = trim(mb_strtolower((string) $ans));
+				$correctOptions = $question->options->where('is_correct', true);
+				
+				foreach ($correctOptions as $correctOption) {
+					if ($studentAnsStr === trim(mb_strtolower($correctOption->option_text))) {
+						$qScore = $question->points;
+						break; // Ответ совпал с одним из ключей, останавливаем поиск
+					}
 				}
 			}
-
 			// 7. ЗАПОЛНЕНИЕ ПРОПУСКОВ (Интегрировано в цикл)
 			elseif ($question->type === 'fill_in_gaps') {
 				$correctGaps = 0;

@@ -57,6 +57,7 @@
 							<!-- ВИЗУАЛИЗАЦИЯ ОТВЕТОВ -->
 							<div class="space-y-3 mb-6">
 
+                                <!-- Одиночный / Множественный выбор -->
 								@if(in_array($question->type, ['single_choice', 'multi_choice', 'single', 'multi']))
 									@foreach($question->options as $option)
 										@php
@@ -69,6 +70,7 @@
 										</div>
 									@endforeach
 
+                                <!-- Соответствие -->
 								@elseif($question->type === 'matching')
 									<div class="grid gap-2">
 										@foreach($question->options as $option)
@@ -77,12 +79,65 @@
 												class="flex items-center justify-between p-3 border rounded-xl {{ $studentChoice === $option->match_text ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200' }}">
 												<span class="font-bold">{{ $option->option_text }}</span>
 												<span class="text-gray-400">→</span>
-												<span>Студент: <b class="text-blue-600">{{ $studentChoice }}</b> | Правильно:
-													<b>{{ $option->match_text }}</b></span>
+												<div class="text-right">
+                                                    <span class="text-sm font-bold {{ $studentChoice === $option->match_text ? 'text-green-700' : 'text-red-700' }}">
+                                                        Студент: {{ $studentChoice }}
+                                                    </span>
+                                                    @if($studentChoice !== $option->match_text)
+                                                        <div class="text-xs text-gray-500 mt-1">Правильно: {{ $option->match_text }}</div>
+                                                    @endif
+                                                </div>
 											</div>
 										@endforeach
 									</div>
 
+                                <!-- Последовательность -->
+                                @elseif($question->type === 'sequence')
+                                    <div class="grid gap-2">
+                                        @foreach($question->options as $idx => $option)
+                                            @php
+                                                $correctRank = $idx + 1;
+                                                $studentRank = $studentAns[$option->id] ?? '-';
+                                                $isRankCorrect = $studentRank == $correctRank;
+                                            @endphp
+                                            <div class="flex items-center justify-between p-3 border rounded-xl {{ $isRankCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200' }}">
+                                                <span class="font-bold">{{ $option->option_text }}</span>
+                                                <div class="text-right">
+                                                    <span class="text-sm font-bold {{ $isRankCorrect ? 'text-green-700' : 'text-red-700' }}">
+                                                        Студент: №{{ $studentRank }}
+                                                    </span>
+                                                    @if(!$isRankCorrect)
+                                                        <div class="text-xs text-gray-500 mt-1">Правильно: №{{ $correctRank }}</div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                <!-- Заполнение пропусков -->
+                                @elseif($question->type === 'fill_in_gaps')
+                                    <div class="space-y-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        @foreach($question->options as $oIdx => $option)
+                                            @php
+                                                $studentWord = $studentAns[$oIdx] ?? '';
+                                                $correctWord = $option->option_text;
+                                                $isGapCorrect = trim(mb_strtolower($studentWord)) === trim(mb_strtolower($correctWord));
+                                            @endphp
+                                            <div class="flex items-center justify-between p-2 border-b last:border-0 border-gray-200">
+                                                <span class="text-xs text-gray-500 font-bold uppercase tracking-widest">Пропуск {{ $oIdx + 1 }}:</span>
+                                                <div class="text-right">
+                                                    <span class="text-sm font-bold {{ $isGapCorrect ? 'text-green-600' : 'text-red-600' }}">
+                                                        Студент: {{ $studentWord ?: '(пусто)' }}
+                                                    </span>
+                                                    @if(!$isGapCorrect)
+                                                        <span class="text-xs text-green-600 ml-2">(Правильно: {{ $correctWord }})</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                <!-- Загрузка файла -->
 								@elseif($question->type === 'file')
 									<div class="p-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 text-center">
 										@if(isset($studentAns['path']))
@@ -95,12 +150,22 @@
 										@endif
 									</div>
 
+                                <!-- Текст / Число / Свободная форма -->
 								@else
 									<div class="p-4 bg-gray-50 rounded-xl border">
 										<p class="text-xs text-gray-400 uppercase font-bold mb-1">Ответ студента:</p>
 										<p class="text-lg font-bold text-blue-900">
 											{{ is_array($studentAns) ? implode(', ', $studentAns) : ($studentAns ?: 'Нет ответа') }}
 										</p>
+
+                                        @if($question->type !== 'free_form')
+                                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                                <p class="text-[10px] text-green-600 font-black uppercase mb-1">Правильные варианты (ключи):</p>
+                                                <p class="text-sm text-green-700 font-bold">
+                                                    {{ $question->options->where('is_correct', true)->pluck('option_text')->implode(', ') ?: '—' }}
+                                                </p>
+                                            </div>
+                                        @endif
 									</div>
 								@endif
 							</div>
