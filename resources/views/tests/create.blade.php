@@ -73,14 +73,12 @@
 							</div>
 
 							<div class="p-6">
+								<div class="p-6">
 								<!-- ВКЛАДКА: РЕДАКТОР -->
 								<div x-show="tab === 'editor'">
-									<div
-										class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
+									<div class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
 										Текст вопроса (<span x-text="getTypeName(question.type)"></span>)
-										<div
-											class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]">
-										</div>
+										<div class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]"></div>
 									</div>
 
 									<div class="border rounded-lg p-4 mb-6 bg-gray-50">
@@ -90,34 +88,23 @@
 										<input type="hidden" :name="`questions[${qIndex}][type]`" :value="question.type">
 									</div>
 
-									<div
-										class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
+									<div class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
 										Изображение
-										<div
-											class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]">
-										</div>
+										<div class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]"></div>
 									</div>
-									<div
-										class="mb-6 flex items-center gap-4 p-4 border-2 border-dashed border-gray-100 rounded-lg">
-										<input type="file" :name="`questions[${qIndex}][image]`"
-											class="text-xs text-gray-400">
-
-										<!-- Предпросмотр, если картинка уже загружена (для страницы редактирования) -->
+									<div class="mb-6 flex items-center gap-4 p-4 border-2 border-dashed border-gray-100 rounded-lg">
+										<input type="file" :name="`questions[${qIndex}][image]`" class="text-xs text-gray-400">
 										<template x-if="question.image">
 											<div class="relative">
-												<img :src="'/storage/' + question.image"
-													class="h-20 rounded border shadow-sm">
+												<img :src="'/storage/' + question.image" class="h-20 rounded border shadow-sm">
 												<p class="text-[9px] text-gray-400 text-center mt-1">Текущее фото</p>
 											</div>
 										</template>
 									</div>
 
-									<div
-										class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
+									<div class="bg-[#7e8e9b] text-white text-[10px] uppercase font-bold px-3 py-1.5 inline-block mb-4 relative">
 										Варианты ответов
-										<div
-											class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]">
-										</div>
+										<div class="absolute right-[-10px] top-0 border-y-[12px] border-y-transparent border-l-[10px] border-l-[#7e8e9b]"></div>
 									</div>
 									<button type="button" x-show="!['free_form', 'file'].includes(question.type)"
 										@click="addOption(qIndex)"
@@ -129,23 +116,16 @@
 												<tr class="text-gray-400 text-left border-b border-gray-100">
 													<th class="w-8 pb-2 text-center">#</th>
 													<template x-if="question.type === 'matching'">
-														<th class="pb-2 px-2 w-1/2 uppercase tracking-tighter text-[9px]">
-															Левая часть (Элемент)</th>
+														<th class="pb-2 px-2 w-1/2 uppercase tracking-tighter text-[9px]">Левая часть (Элемент)</th>
 													</template>
 													<template x-if="question.type === 'matching'">
-														<th class="pb-2 px-2 w-1/2 uppercase tracking-tighter text-[9px]">
-															Правая часть (Пара)</th>
+														<th class="pb-2 px-2 w-1/2 uppercase tracking-tighter text-[9px]">Правая часть (Пара)</th>
 													</template>
-													<template
-														x-if="!['matching', 'free_form', 'file', 'text', 'number'].includes(question.type)">
-														<th class="pb-2 uppercase tracking-tighter text-[9px]">Текст
-															варианта ответа</th>
+													<template x-if="!['matching', 'free_form', 'file', 'text', 'number'].includes(question.type)">
+														<th class="pb-2 uppercase tracking-tighter text-[9px]">Текст варианта ответа</th>
 													</template>
-													<template
-														x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
-														<th
-															class="w-20 pb-2 text-center uppercase tracking-tighter text-[9px]">
-															Верно?</th>
+													<template x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
+														<th class="w-20 pb-2 text-center uppercase tracking-tighter text-[9px]">Верно?</th>
 													</template>
 													<th class="w-10 pb-2"></th>
 												</tr>
@@ -153,88 +133,74 @@
 											<tbody class="divide-y divide-gray-50">
 												<template x-for="(option, oIndex) in question.options" :key="oIndex">
 													<tr class="group hover:bg-blue-50/30 transition-colors">
-														<td class="py-3 text-gray-300 font-mono text-center"
-															x-text="oIndex + 1"></td>
-
-														<!-- ЛЕВАЯ КОЛОНКА / ОСНОВНОЙ ТЕКСТ -->
+														<td class="py-3 text-gray-300 font-mono text-center" x-text="oIndex + 1"></td>
 														<td class="py-2 px-1">
-															<input type="text"
-																:name="`questions[${qIndex}][options][${oIndex}][text]`"
+															<input type="text" :name="`questions[${qIndex}][options][${oIndex}][text]`"
 																x-model="option.text"
 																class="w-full outline-none p-1 border-b border-transparent focus:border-blue-300 bg-transparent"
 																placeholder="Введите текст...">
 														</td>
-
-														<!-- ПРАВАЯ КОЛОНКА (Только для соответствия) -->
 														<template x-if="question.type === 'matching'">
 															<td class="py-2 px-2">
 																<div class="flex items-center gap-2">
 																	<span class="text-gray-300">↔</span>
-																	<input type="text"
-																		:name="`questions[${qIndex}][options][${oIndex}][match_text]`"
+																	<input type="text" :name="`questions[${qIndex}][options][${oIndex}][match_text]`"
 																		x-model="option.match_text"
 																		class="w-full outline-none p-1 border-b border-orange-200 bg-orange-50/30 focus:bg-orange-50 focus:border-orange-400 rounded-sm"
 																		placeholder="Пара к тексту...">
 																</div>
 															</td>
 														</template>
-
-														<!-- ГАЛОЧКА "ВЕРНО" (Для выбора) -->
-														<template
-															x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
+														<template x-if="['single_choice', 'multi_choice', 'image_choice'].includes(question.type)">
 															<td class="py-2 text-center">
-																<input
-																	:type="['single_choice', 'image_choice'].includes(question.type) ? 'radio' : 'checkbox'"
+																<input :type="['single_choice', 'image_choice'].includes(question.type) ? 'radio' : 'checkbox'"
 																	:name="['single_choice', 'image_choice'].includes(question.type) ? `questions[${qIndex}][correct]` : `questions[${qIndex}][options][${oIndex}][is_correct]`"
 																	:value="oIndex" :checked="option.is_correct"
 																	class="w-4 h-4 text-blue-600 cursor-pointer">
 															</td>
 														</template>
-
-														<!-- КНОПКА УДАЛЕНИЯ -->
 														<td class="py-2 text-right pr-2">
 															<button type="button" @click="removeOption(qIndex, oIndex)"
-																class="text-gray-300 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100">
-																🗑
-															</button>
+																class="text-gray-300 hover:text-red-500 transition-opacity opacity-0 group-hover:opacity-100">🗑</button>
 														</td>
 													</tr>
 												</template>
 											</tbody>
 										</table>
 									</div>
+								</div> <!-- ЗАКРЫВАЕМ ВКЛАДКУ РЕДАКТОР -->
 
-									<!-- ВКЛАДКА: КОММЕНТАРИЙ -->
-									<div x-show="tab === 'comment'">
-										<textarea :name="`questions[${qIndex}][explanation]`"
-											class="w-full border-2 border-dashed p-4 outline-none" rows="4"
-											placeholder="Пояснение к ответу..."></textarea>
-									</div>
+								<!-- ВКЛАДКА: КОММЕНТАРИЙ -->
+								<div x-show="tab === 'comment'" x-cloak>
+									<textarea :name="`questions[${qIndex}][explanation]`"
+										class="w-full border-2 border-dashed p-4 outline-none" rows="4"
+										placeholder="Пояснение к ответу..."></textarea>
+								</div>
 
-									<!-- ВКЛАДКА: ПАРАМЕТРЫ -->
-									<div x-show="tab === 'params'">
-										<div class="space-y-3 p-4">
-											<label class="flex items-center gap-3"><input type="checkbox"
-													:name="`questions[${qIndex}][is_required]`" class="w-4 h-4"> <span
-													class="text-sm">Обязательный вопрос</span></label>
-											<label class="flex items-center gap-3"><input type="checkbox"
-													:name="`questions[${qIndex}][shuffle_options]`" class="w-4 h-4"> <span
-													class="text-sm">Перемешать ответы</span></label>
-										</div>
-									</div>
-
-									<!-- Футер вопроса -->
-									<div class="mt-6 pt-6 border-t flex justify-between items-center">
-										<div class="flex items-center gap-2">
-											<span class="text-[10px] text-gray-400 uppercase font-black">Баллов:</span>
-											<input type="number" :name="`questions[${qIndex}][points]`"
-												x-model="question.points"
-												class="w-16 border rounded p-1 text-center font-bold text-blue-600">
-										</div>
-										<button type="button" @click="removeQuestion(qIndex)"
-											class="text-xs text-red-500 font-bold uppercase hover:underline">Удалить</button>
+								<!-- ВКЛАДКА: ПАРАМЕТРЫ -->
+								<div x-show="tab === 'params'" x-cloak>
+									<div class="space-y-3 p-4">
+										<label class="flex items-center gap-3"><input type="checkbox"
+												:name="`questions[${qIndex}][is_required]`" class="w-4 h-4"> <span
+												class="text-sm">Обязательный вопрос</span></label>
+										<label class="flex items-center gap-3"><input type="checkbox"
+												:name="`questions[${qIndex}][shuffle_options]`" class="w-4 h-4"> <span
+												class="text-sm">Перемешать ответы</span></label>
 									</div>
 								</div>
+
+								<!-- Футер вопроса (Вынесен за пределы вкладок) -->
+								<div class="mt-6 pt-6 border-t flex justify-between items-center bg-white">
+									<div class="flex items-center gap-2">
+										<span class="text-[10px] text-gray-400 uppercase font-black">Баллов:</span>
+										<input type="number" :name="`questions[${qIndex}][points]`"
+											x-model="question.points"
+											class="w-16 border rounded p-1 text-center font-bold text-blue-600">
+									</div>
+									<button type="button" @click="removeQuestion(qIndex)"
+										class="text-xs text-red-500 font-bold uppercase hover:underline">Удалить вопрос</button>
+								</div>
+							</div>
 							</div>
 					</template>
 				</div>
